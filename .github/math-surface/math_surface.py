@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 DEEP = "*" * 2 + "/"
 MARKDOWN_SUFFIXES = {".md", ".markdown", ".mdx"}
 DEFAULT_INCLUDE = [DEEP + "*.md", DEEP + "*.markdown", DEEP + "*.mdx"]
@@ -113,12 +113,21 @@ def surface_for(path: str, policy: Policy) -> str:
 def files_for(root: Path, policy: Policy) -> list[Path]:
     root = root.resolve()
     if (root / ".git").exists():
-        run = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], check=True, capture_output=True)
+        run = subprocess.run(
+            [
+                "git", "-C", str(root), "ls-files", "-z",
+                "--cached", "--others", "--exclude-standard",
+            ],
+            check=True,
+            capture_output=True,
+        )
         candidates = [root / item.decode() for item in run.stdout.split(b"\0") if item]
     else:
         candidates = [item for item in root.rglob("*") if item.is_file()]
     selected = []
     for item in candidates:
+        if not item.is_file():
+            continue
         relative = item.relative_to(root).as_posix()
         if item.suffix.lower() not in MARKDOWN_SUFFIXES:
             continue
@@ -455,6 +464,89 @@ def rewrite_dollar_collisions(text: str) -> tuple[str, list[str]]:
     return "".join(lines), skipped
 
 
+def dollar_collision_bodies(text: str) -> list[dict[str, Any]]:
+    """Return exact TeX bodies from GFM-collision-prone dollar displays."""
+    lines = text.splitlines(keepends=True)
+    records: list[dict[str, Any]] = []
+    in_fence, fence_char, fence_len = False, "", 0
+    display_open: int | None = None
+    for index, line in enumerate(lines):
+        plain = line.rstrip("\r\n")
+        fence = FENCE.match(plain)
+        if fence:
+            marker = fence.group(1)
+            if not in_fence:
+                in_fence, fence_char, fence_len = True, marker[0], len(marker)
+            elif marker[0] == fence_char and len(marker) >= fence_len:
+                in_fence, fence_char, fence_len = False, "", 0
+            continue
+        if in_fence or plain.strip() != "$$":
+            continue
+        if display_open is None:
+            display_open = index
+            continue
+        body_lines = lines[display_open + 1:index]
+        if any(SETEXT_COLLISION.fullmatch(item.rstrip("\r\n")) for item in body_lines):
+            body = "".join(body_lines)
+            records.append({
+                "line": display_open + 1,
+                "body": body,
+                "tex_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+            })
+        display_open = None
+    return records
+
+
+def math_fence_bodies(text: str) -> list[str]:
+    """Return exact bodies of fenced GitHub math containers."""
+    lines = text.splitlines(keepends=True)
+    bodies: list[str] = []
+    index = 0
+    while index < len(lines):
+        plain = lines[index].rstrip("\r\n")
+        fence = FENCE.match(plain)
+        language = fence.group(2).strip().split(maxsplit=1)[0:1] if fence else []
+        if not fence or [item.lower() for item in language] != ["math"]:
+            index += 1
+            continue
+        marker = fence.group(1)
+        close = index + 1
+        while close < len(lines):
+            candidate = FENCE.match(lines[close].rstrip("\r\n"))
+            if (candidate and candidate.group(1)[0] == marker[0]
+                    and len(candidate.group(1)) >= len(marker)):
+                bodies.append("".join(lines[index + 1:close]))
+                index = close + 1
+                break
+            close += 1
+        else:
+            index += 1
+    return bodies
+
+
+def collision_semantic_records(original: str, revised: str) -> list[dict[str, Any]]:
+    """Verify every MSM010 body survives its container conversion byte-for-byte."""
+    available = Counter(
+        hashlib.sha256(body.encode("utf-8")).hexdigest()
+        for body in math_fence_bodies(revised)
+    )
+    records: list[dict[str, Any]] = []
+    for item in dollar_collision_bodies(original):
+        digest = item["tex_sha256"]
+        verified = available[digest] > 0
+        if verified:
+            available[digest] -= 1
+        records.append({
+            "line": item["line"],
+            "display": True,
+            "rule_id": "MSM010",
+            "before_tex_sha256": digest,
+            "after_tex_sha256": digest if verified else None,
+            "byte_identical": verified,
+        })
+    return records
+
+
 def rewrite(text: str) -> tuple[str, list[str]]:
     replacements, skipped = [], []
     offset, in_fence, fence_char, fence_len = 0, False, "", 0
@@ -521,6 +613,9 @@ def fix(root: Path, policy: Policy, apply: bool, allow_archival: bool,
         revised, skipped = rewrite(original)
         if revised == original:
             continue
+        collision_records = collision_semantic_records(original, revised)
+        if any(not item["byte_identical"] for item in collision_records):
+            raise RuntimeError(f"MSM010 semantic-preservation failure: {relative}")
         sys.stdout.write("".join(difflib.unified_diff(
             original.splitlines(keepends=True), revised.splitlines(keepends=True),
             fromfile=f"a/{relative}", tofile=f"b/{relative}")))
@@ -529,6 +624,7 @@ def fix(root: Path, policy: Policy, apply: bool, allow_archival: bool,
             "before_sha256": hashlib.sha256(original.encode()).hexdigest(),
             "after_sha256": hashlib.sha256(revised.encode()).hexdigest(),
             "preserved_tex_bodies": legacy_semantic_hashes(original),
+            "preserved_collision_bodies": collision_records,
             "skipped": skipped,
         })
         if apply:

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 import json
+import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 import math_surface as subject
+import validate_gfm_structure as structure
 
 
 class ScanTests(unittest.TestCase):
@@ -139,8 +143,77 @@ class RewriteTests(unittest.TestCase):
         self.assertEqual(revised, original)
         self.assertEqual(skipped, [])
 
+    def test_records_collision_body_before_and_after(self):
+        original = "$$\nG_i^{\\mathrm{inventory}}\n=\nx\n$$\n"
+        revised, _ = subject.rewrite(original)
+        records = subject.collision_semantic_records(original, revised)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["rule_id"], "MSM010")
+        self.assertTrue(records[0]["byte_identical"])
+        self.assertEqual(
+            records[0]["before_tex_sha256"], records[0]["after_tex_sha256"]
+        )
+
+    def test_detects_collision_body_preservation_failure(self):
+        original = "$$\nG\n=\nx\n$$\n"
+        altered = "```math\nG\n=\ny\n```\n"
+        records = subject.collision_semantic_records(original, altered)
+        self.assertFalse(records[0]["byte_identical"])
+        self.assertIsNone(records[0]["after_tex_sha256"])
+
+
+class StructureParityTests(unittest.TestCase):
+    def test_normalizes_approved_display_container_changes(self):
+        before = "Intro.\n\n\\[\nG\n=\nx\n\\]\n\nEnd.\n"
+        after = "Intro.\n\n```math\nG\n=\nx\n```\n\nEnd.\n"
+        self.assertEqual(
+            structure.normalize_math_blocks(before),
+            structure.normalize_math_blocks(after),
+        )
+
+    def test_preserves_non_math_fence_contents(self):
+        text = "```text\n$$\nG\n=\nx\n$$\n```\n"
+        self.assertEqual(structure.normalize_math_blocks(text), text)
+
+    def test_skeleton_ignores_source_position_metadata(self):
+        before = '<document sourcepos="1:1-1:3"><paragraph sourcepos="1:1-1:3"/></document>'
+        after = '<document sourcepos="4:1-4:8"><paragraph sourcepos="4:1-4:8"/></document>'
+        self.assertEqual(structure.skeleton(before), structure.skeleton(after))
+
+    @unittest.skipUnless(
+        shutil.which(os.environ.get("CMARK_GFM", "cmark-gfm")),
+        "pinned cmark-gfm is not installed",
+    )
+    def test_cmark_accepts_math_repair_and_rejects_heading_change(self):
+        executable = shutil.which(os.environ.get("CMARK_GFM", "cmark-gfm"))
+        assert executable is not None
+        before = "# Model\n\n$$\nG\n=\nx\n$$\n"
+        repaired = "# Model\n\n```math\nG\n=\nx\n```\n"
+        changed = "## Model\n\n```math\nG\n=\nx\n```\n"
+        baseline = structure.structure_for_text(before, executable)
+        self.assertEqual(baseline, structure.structure_for_text(repaired, executable))
+        self.assertNotEqual(baseline, structure.structure_for_text(changed, executable))
+
 
 class ReportAndExtractionTests(unittest.TestCase):
+    def test_git_inventory_includes_nonignored_untracked_markdown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / ".gitignore").write_text("ignored.md\n", encoding="utf-8")
+            (root / "tracked.md").write_text("Tracked.\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", ".gitignore", "tracked.md"],
+                check=True,
+            )
+            (root / "new.md").write_text("New.\n", encoding="utf-8")
+            (root / "ignored.md").write_text("Ignored.\n", encoding="utf-8")
+            files = subject.files_for(root, subject.load_policy(root))
+            self.assertEqual(
+                [item.relative_to(root).as_posix() for item in files],
+                ["new.md", "tracked.md"],
+            )
+
     def test_inline_extraction_does_not_cross_adjacent_expressions(self):
         self.assertEqual(
             subject.inline_dollar_fragments(

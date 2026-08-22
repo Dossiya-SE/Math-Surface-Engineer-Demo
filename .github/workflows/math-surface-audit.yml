@@ -24,9 +24,30 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Run deterministic scanner regression tests
+      - name: Build pinned cmark-gfm structural oracle
+        run: |
+          git clone --depth 1 --branch 0.29.0.gfm.13 https://github.com/github/cmark-gfm.git .math-surface-tools/cmark-gfm
+          test "$(git -C .math-surface-tools/cmark-gfm rev-parse HEAD)" = "587a12bb54d95ac37241377e6ddc93ea0e45439b"
+          cmake -S .math-surface-tools/cmark-gfm -B .math-surface-tools/cmark-gfm/build \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMARK_TESTS=OFF -DCMARK_SHARED=OFF
+          cmake --build .math-surface-tools/cmark-gfm/build --parallel 2
+
+      - name: Run deterministic scanner and structure tests
         working-directory: .github/math-surface
+        env:
+          CMARK_GFM: ${{ github.workspace }}/.math-surface-tools/cmark-gfm/build/src/cmark-gfm
         run: python3 -m unittest -v test_math_surface.py
+
+      - name: Enforce repaired-document GFM structural parity
+        env:
+          CMARK_GFM: ${{ github.workspace }}/.math-surface-tools/cmark-gfm/build/src/cmark-gfm
+        run: |
+          python3 .github/math-surface/validate_gfm_structure.py \
+            .github/math-surface/fixtures/pre-repair-README.txt README.md \
+            --cmark-gfm "$CMARK_GFM"
+          python3 .github/math-surface/validate_gfm_structure.py \
+            .github/math-surface/fixtures/pre-repair-model.txt docs/model.md \
+            --cmark-gfm "$CMARK_GFM"
 
       - name: Generate reproducible findings
         run: |
@@ -80,13 +101,28 @@ jobs:
       - name: Enforce dual-renderer gate
         run: test "${{ steps.renderer.outputs.exit_code }}" -eq 0
 
-      - name: Run visual regression when a reviewed baseline exists
-        shell: bash
+      - name: Install pinned Chromium
+        working-directory: .github/math-surface
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate or enforce visual regression
+        id: visual
+        working-directory: .github/math-surface
+        env:
+          MATH_FRAGMENTS: ../../math-fragments.json
         run: |
-          if find .github/math-surface -path '*-snapshots/math-surface*.png' -print -quit | grep -q .; then
-            cd .github/math-surface
-            npx playwright install --with-deps chromium
-            MATH_FRAGMENTS=../../math-fragments.json npx playwright test --config=playwright.config.mjs
+          if find . -path '*-snapshots/math-surface*.png' -print -quit | grep -q .; then
+            echo 'mode=enforce' >> "$GITHUB_OUTPUT"
+            npx playwright test --config=playwright.config.mjs
           else
-            echo 'Visual baseline not present; establish and review it in the pinned CI environment.'
+            echo 'mode=baseline-candidate' >> "$GITHUB_OUTPUT"
+            npx playwright test --config=playwright.config.mjs --update-snapshots
           fi
+
+      - name: Retain visual baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: math-surface-visual-baseline
+          path: .github/math-surface/**/*-snapshots/math-surface*.png
+          if-no-files-found: error
