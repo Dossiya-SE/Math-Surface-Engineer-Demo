@@ -1,0 +1,10 @@
+---
+title: "Interface resilience demonstrator"
+format: html
+---
+
+Quarto uses its Pandoc contract, so inline math $x \in \mathcal{K}$ is native.
+
+$$
+\dot{x}=f(x,u,\eta).
+$$

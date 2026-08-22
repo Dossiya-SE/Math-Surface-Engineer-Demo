@@ -1,0 +1,8 @@
+node_modules/
+.quarto/
+_site/
+*.aux
+*.log
+*.pdf
+test-results/
+playwright-report/
