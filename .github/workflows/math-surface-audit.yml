@@ -43,7 +43,7 @@ jobs:
           CMARK_GFM: ${{ github.workspace }}/.math-surface-tools/cmark-gfm/build/src/cmark-gfm
         run: |
           python3 .github/math-surface/validate_gfm_structure.py \
-            .github/math-surface/fixtures/pre-repair-README.txt README.md \
+            .github/math-surface/fixtures/structural-oracle-README.txt README.md \
             --cmark-gfm "$CMARK_GFM"
           python3 .github/math-surface/validate_gfm_structure.py \
             .github/math-surface/fixtures/pre-repair-model.txt docs/model.md \

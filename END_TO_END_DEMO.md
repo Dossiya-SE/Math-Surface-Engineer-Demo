@@ -63,6 +63,7 @@ The requested GitHub Markdown repair is **approved**: semantic, normalized struc
 - `.github/math-surface/math_surface.py`: deterministic audit, repair, and extraction engine.
 - `.github/math-surface/validate_renderers.mjs`: pinned MathJax 4 and KaTeX validator.
 - `.github/math-surface/validate_gfm_structure.py`: GFM structural comparison gate.
+- `.github/math-surface/fixtures/pre-repair-README.txt`: immutable historical source fixture; `structural-oracle-README.txt`: the approved navigation/badge structure expressed with the legacy math containers for normalized parity testing.
 - `.github/math-surface/test_math_surface.py`: 25 deterministic regression tests.
 - `.github/math-surface/package.json`: exact renderer/test dependency pins.
 - `.github/math-surface/playwright.config.mjs` and `math-render.spec.mjs`: controlled visual and embedded-MathML regression fixture.
