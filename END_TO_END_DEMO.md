@@ -6,10 +6,10 @@
 
 ## Audited snapshot
 
-- Baseline commit: `ca2029c660b3bfd3b55736b638cd26828c0f18f8`
-- Tool: `engineer-math-surfaces 1.2.0`
+- Exact local fixture baseline: `ca2029c660b3bfd3b55736b638cd26828c0f18f8`; published GitHub baseline: `b1ed6901a80d84a85cbf21317f735eb54913b082`.
+- Repair engine: `engineer-math-surfaces 1.2.0`; final governance and verification gate: `engineer-math-surfaces 1.3.0`.
 - Declared surfaces: GitHub Markdown, MDX, Quarto, LaTeX, Jupyter, generated HTML, and archival Markdown.
-- Scanner scope: five tracked Markdown/MDX files. Native non-Markdown surfaces were validated separately where their engine was available.
+- Baseline scanner scope: five tracked Markdown/MDX files. Final governance scan: seven Markdown/MDX files, with non-ignored untracked-file inventory coverage. Native non-Markdown surfaces were validated separately where their engine was available.
 
 ## Baseline findings
 
@@ -37,7 +37,7 @@
 | Dry-run before apply | PASS | Complete deterministic patch inspected before mutation |
 | Diff hygiene | PASS | `git diff --check` clean; complete diff inspected |
 | Post-fix audit | PASS with one expected review item | Zero high-confidence findings and zero `MSM010`; archival item remains review-only |
-| Scanner regression suite | PASS | 18 of 18 deterministic tests |
+| Scanner regression suite | PASS in CI | 25 of 25 deterministic tests, including untracked inventory, `MSM010` body preservation, and cmark integration |
 | Automatic semantic preservation | PASS for recorded spans | Four legacy TeX bodies retain ledger SHA-256 digests |
 | Collision-body preservation | PASS independently | Pre/post TeX-body SHA-256 values match: `f4dfc991f907c9a891657cc914ccd39252d8d201e2e41b709ee1a667e865ea72` |
 | Archive preservation | PASS | Whole-file pre/post SHA-256 values match: `468a1ed7e239f91ac801cb98de98993aa8caf6e1bb6f639ec408c3669756f449` |
@@ -45,15 +45,17 @@
 | LaTeX engine | PASS | `pdflatex` completed after the declared dependency repair |
 | Quarto source via Pandoc | PASS, limited | Pandoc emitted two MathML nodes; the Quarto CLI itself was unavailable |
 | Notebook via Pandoc | PASS, limited | Notebook JSON parsed and Pandoc emitted two MathML nodes |
-| `cmark-gfm` structural parity | UNEXECUTED locally | Required executable was unavailable; this is not counted as a pass |
-| MathJax 4 + KaTeX strict validation | UNEXECUTED locally | Exact packages could not be installed in the restricted local network; pinned CI gate is installed |
+| `cmark-gfm` structural parity | PASS in CI | Pinned `cmark-gfm` preserved 59 normalized README nodes and 11 `docs/model.md` nodes |
+| MathJax 4 + KaTeX strict validation | PASS in CI | Exact-pinned MathJax 4.1.3 and KaTeX 0.18.4 accepted all ten extracted formulas with zero failures |
 | MDX compiler | UNINSPECTED | No project MDX compiler was available in the fixture |
-| Actual GitHub rendering | UNINSPECTED | Requires the hosted GitHub target |
-| Visual regression | UNEXECUTED | A baseline must first be generated and reviewed in the pinned CI environment |
+| Actual GitHub rendering | PASS | Hosted README exposes five accessible GitHub math trees; code examples and literal currency remain prose/code |
+| Visual regression | PASS | Pinned Chromium rendered all ten formulas; the CI-generated candidate was visually reviewed for legibility and clipping, then committed as the enforced baseline |
+
+The advanced-gate bootstrap is retained in [GitHub Actions run 32602376752](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/runs/32602376752). Its visual artifact digest is `sha256:339d8d1f09617d5c792e0e8b3e279177647aef1bc1fec8c2523210cea4bfe95b`; the reviewed PNG itself is `sha256:406cd0971f2dc264370f0161483a4d83df41462b4b2ba6b055c78b81dfa23155`.
 
 ## Release decision
 
-Local release is **blocked**, because the structural and dual-renderer gates are unexecuted. The repository is prepared to execute the missing gates in CI. This is an intentional rigorous outcome: unavailable evidence is not relabeled as success.
+The requested GitHub Markdown repair is **approved**: semantic, normalized structural, dual-renderer, hosted-rendering, and visual gates all pass. Broader cross-surface certification remains explicitly partial because the fixture has no MDX compiler and the native Quarto CLI was unavailable; those gaps are not relabeled as successes.
 
 ## Installed governance
 
@@ -61,13 +63,15 @@ Local release is **blocked**, because the structural and dual-renderer gates are
 - `.github/math-surface/math_surface.py`: deterministic audit, repair, and extraction engine.
 - `.github/math-surface/validate_renderers.mjs`: pinned MathJax 4 and KaTeX validator.
 - `.github/math-surface/validate_gfm_structure.py`: GFM structural comparison gate.
-- `.github/math-surface/test_math_surface.py`: 18 deterministic regression tests.
+- `.github/math-surface/test_math_surface.py`: 25 deterministic regression tests.
 - `.github/math-surface/package.json`: exact renderer/test dependency pins.
 - `.github/math-surface/playwright.config.mjs` and `math-render.spec.mjs`: controlled visual and embedded-MathML regression fixture.
-- `.github/workflows/math-surface-audit.yml`: SARIF, human audit, extraction, dual-renderer enforcement, regression tests, retained artifacts, and conditional visual regression.
+- `.github/math-surface/math-render.spec.mjs-snapshots/math-surface-linux.png`: human-reviewed Chromium reference image.
+- `.github/workflows/math-surface-audit.yml`: pinned cmark build, repaired-document structural parity, SARIF, audit, extraction, dual-renderer enforcement, regression tests, retained artifacts, and enforced visual regression.
 
 ## Limitations exposed by the exercise
 
-1. The current provenance ledger records legacy-delimiter TeX bodies but does not record the `MSM010` dollar-display body. An independent hash was therefore required.
+1. The original repair ledger was produced by version 1.2.0 and did not record the `MSM010` dollar-display body, so this demonstration used an independent hash plus exact pre-repair fixtures. Version 1.3.0 now records and tests both sides of that preservation invariant for future repairs.
 2. Formula extraction conservatively paired two unescaped currency amounts. Making currency explicit with escaped dollar signs removed the ambiguity.
 3. The scanner intentionally audits Markdown and MDX only; Quarto, LaTeX, notebooks, generated HTML, and live GitHub output require their own adapters and engines.
+4. Native Quarto and project-specific MDX compilation remain outside the available fixture toolchain and are reported as limited or uninspected rather than inferred.
