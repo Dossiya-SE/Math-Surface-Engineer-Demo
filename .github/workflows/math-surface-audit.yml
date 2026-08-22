@@ -1,0 +1,92 @@
+name: Mathematics surface audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Run deterministic scanner regression tests
+        working-directory: .github/math-surface
+        run: python3 -m unittest -v test_math_surface.py
+
+      - name: Generate reproducible findings
+        run: |
+          python3 .github/math-surface/math_surface.py audit . --format sarif --output math-surface.sarif --fail-on none
+          python3 .github/math-surface/math_surface.py audit . --format markdown --output math-surface-audit.md --fail-on none
+          python3 .github/math-surface/math_surface.py extract . --output math-fragments.json
+
+      - name: Install pinned renderer validators
+        working-directory: .github/math-surface
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Validate MathJax 4 and KaTeX
+        id: renderer
+        run: |
+          set +e
+          node .github/math-surface/validate_renderers.mjs math-fragments.json both > renderer-validation.json
+          status=$?
+          python3 - <<'PY'
+          import json
+          report = json.load(open("renderer-validation.json", encoding="utf-8"))
+          for item in report["results"]:
+              failures = [f"MathJax={item['mathjax']}", f"KaTeX={item['katex']}"]
+              if any("FAIL:" in value for value in failures):
+                  print(f"{item['path']}:{item['line']}: {'; '.join(failures)}")
+          print(f"renderer failures={report['failures']} formulas={report['formulas']}")
+          PY
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Retain audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: math-surface-audit
+          path: |
+            math-surface.sarif
+            math-surface-audit.md
+            math-fragments.json
+            renderer-validation.json
+
+      - name: Upload SARIF when supported
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: math-surface.sarif
+
+      - name: Enforce high-confidence gate
+        run: |
+          python3 .github/math-surface/math_surface.py audit . --format json --output math-surface.json --fail-on error
+
+      - name: Enforce dual-renderer gate
+        run: test "${{ steps.renderer.outputs.exit_code }}" -eq 0
+
+      - name: Run visual regression when a reviewed baseline exists
+        shell: bash
+        run: |
+          if find .github/math-surface -path '*-snapshots/math-surface*.png' -print -quit | grep -q .; then
+            cd .github/math-surface
+            npx playwright install --with-deps chromium
+            MATH_FRAGMENTS=../../math-fragments.json npx playwright test --config=playwright.config.mjs
+          else
+            echo 'Visual baseline not present; establish and review it in the pinned CI environment.'
+          fi

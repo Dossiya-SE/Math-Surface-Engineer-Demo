@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dossiya-se.example/schemas/math-surface-policy.schema.json",
+  "title": "Mathematics surface policy",
+  "type": "object",
+  "required": ["version", "default_surface", "include", "exclude", "archival", "policy"],
+  "properties": {
+    "version": {"const": 1},
+    "default_surface": {
+      "enum": ["github-markdown", "mdx", "quarto", "latex", "notebook", "generated-html"]
+    },
+    "include": {"type": "array", "items": {"type": "string"}},
+    "exclude": {"type": "array", "items": {"type": "string"}},
+    "archival": {"type": "array", "items": {"type": "string"}},
+    "surface_overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["glob", "surface"],
+        "properties": {
+          "glob": {"type": "string"},
+          "surface": {
+            "enum": ["github-markdown", "mdx", "quarto", "latex", "notebook", "generated-html"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "autofix_archival",
+        "autofix_mdx",
+        "autofix_encoding",
+        "require_utf8",
+        "require_renderer_validation",
+        "require_cmark_structural_parity",
+        "require_provenance_ledger"
+      ],
+      "properties": {
+        "autofix_archival": {"type": "boolean"},
+        "autofix_mdx": {"type": "boolean"},
+        "autofix_encoding": {"type": "boolean"},
+        "require_utf8": {"type": "boolean"},
+        "require_renderer_validation": {"type": "boolean"},
+        "require_cmark_structural_parity": {"type": "boolean"},
+        "require_provenance_ledger": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

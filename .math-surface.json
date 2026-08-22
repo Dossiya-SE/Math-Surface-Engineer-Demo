@@ -1,0 +1,50 @@
+{
+  "$schema": ".github/math-surface/math-surface-policy.schema.json",
+  "version": 1,
+  "default_surface": "github-markdown",
+  "include": [
+    "**/*.md",
+    "**/*.markdown",
+    "**/*.mdx"
+  ],
+  "exclude": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "archival": [
+    "**/archive/**",
+    "**/archives/**",
+    "**/conversation/**",
+    "**/conversation_memory/**",
+    "**/memory/**",
+    "**/prompts/**",
+    "**/*VERBATIM*.md",
+    "**/*SNAPSHOT*.md"
+  ],
+  "surface_overrides": [
+    {
+      "glob": "**/*.qmd",
+      "surface": "quarto"
+    },
+    {
+      "glob": "**/*.tex",
+      "surface": "latex"
+    },
+    {
+      "glob": "**/*.ipynb",
+      "surface": "notebook"
+    }
+  ],
+  "policy": {
+    "autofix_archival": false,
+    "autofix_mdx": false,
+    "autofix_encoding": false,
+    "require_utf8": true,
+    "require_renderer_validation": true,
+    "require_cmark_structural_parity": true,
+    "require_provenance_ledger": true
+  }
+}
