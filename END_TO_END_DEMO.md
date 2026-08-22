@@ -41,7 +41,7 @@
 | Automatic semantic preservation | PASS for recorded spans | Four legacy TeX bodies retain ledger SHA-256 digests |
 | Collision-body preservation | PASS independently | Pre/post TeX-body SHA-256 values match: `f4dfc991f907c9a891657cc914ccd39252d8d201e2e41b709ee1a667e865ea72` |
 | Archive preservation | PASS | Whole-file pre/post SHA-256 values match: `468a1ed7e239f91ac801cb98de98993aa8caf6e1bb6f639ec408c3669756f449` |
-| Formula extraction | PASS | Nine intended formulas; no code or currency fragments |
+| Formula extraction | PASS | Ten intended formulas, including the governance equation; no code or currency fragments |
 | LaTeX engine | PASS | `pdflatex` completed after the declared dependency repair |
 | Quarto source via Pandoc | PASS, limited | Pandoc emitted two MathML nodes; the Quarto CLI itself was unavailable |
 | Notebook via Pandoc | PASS, limited | Notebook JSON parsed and Pandoc emitted two MathML nodes |
