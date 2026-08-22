@@ -51,7 +51,7 @@
 | Actual GitHub rendering | PASS | Hosted README exposes five accessible GitHub math trees; code examples and literal currency remain prose/code |
 | Visual regression | PASS | Pinned Chromium rendered all ten formulas; the CI-generated candidate was visually reviewed for legibility and clipping, then committed as the enforced baseline |
 
-The advanced-gate bootstrap is retained in [GitHub Actions run 32602376752](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/runs/32602376752). Its visual artifact digest is `sha256:339d8d1f09617d5c792e0e8b3e279177647aef1bc1fec8c2523210cea4bfe95b`; the reviewed PNG itself is `sha256:406cd0971f2dc264370f0161483a4d83df41462b4b2ba6b055c78b81dfa23155`.
+The advanced-gate bootstrap is retained in [GitHub Actions run 32602376752](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/runs/32602376752). After adding the approved README navigation, [GitHub Actions run 32603225170](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/runs/32603225170) generated the refreshed visual candidate with artifact digest `sha256:53b4bb8d7d825964fb01d4802a5f06bf508def5bcc097a65017e126353e435eb`; the reviewed current PNG is `sha256:367ff7dc8fe1d3945412f65ecace3efda35010459ed03f9cc64958148834fbf1`.
 
 ## Release decision
 
