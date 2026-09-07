@@ -2,33 +2,11 @@
 
 [![Mathematics surface audit](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/workflows/math-surface-audit.yml/badge.svg?branch=main)](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/actions/workflows/math-surface-audit.yml)
 [![Latest release](https://img.shields.io/github/v/release/Dossiya-SE/Math-Surface-Engineer-Demo?display_name=tag&sort=semver)](https://github.com/Dossiya-SE/Math-Surface-Engineer-Demo/releases/latest)
+[![MathJax 4.1.3](https://img.shields.io/badge/MathJax-4.1.3-0b7285)](.github/math-surface/package.json)
+[![KaTeX 0.18.4](https://img.shields.io/badge/KaTeX-0.18.4-7950f2)](.github/math-surface/package.json)
+[![cmark-gfm pinned](https://img.shields.io/badge/cmark--gfm-0.29.0.gfm.13-0969da)](.github/workflows/math-surface-audit.yml)
 
-A reproducible engineering demonstrator for **publishing, auditing, repairing, and regression-testing mathematical content across heterogeneous documentation renderers**.
-
-The repository uses one coupled-infrastructure resilience model as a controlled mathematical fixture. The scientific contribution of this repository is the **cross-surface mathematics workflow**, not a claim that the fixture is a calibrated infrastructure model.
-
-```text
-mathematical source
-→ surface-specific rendering
-→ structural + semantic audit
-→ repair at the source of truth
-→ renderer validation
-→ reviewed visual regression
-→ release gate
-```
-
-## What this repository verifies
-
-The same mathematical content is exercised across:
-
-- GitHub Markdown;
-- MDX;
-- Quarto/Pandoc;
-- LaTeX;
-- Jupyter Markdown/MathJax;
-- generated HTML.
-
-The audit distinguishes mathematical content from ordinary text, code literals, currency, archived material, and generated outputs so that repairs do not silently mutate non-mathematical fixtures.
+This repository demonstrates a reproducible audit, repair, verification, and regression-governance workflow for mathematical documentation across multiple rendering surfaces; the coupled-infrastructure equations below are a controlled mathematical fixture, not a claim of a calibrated infrastructure model.
 
 ## Project navigation
 
@@ -36,12 +14,10 @@ The audit distinguishes mathematical content from ordinary text, code literals, 
 |---|---|
 | [End-to-end demonstration](END_TO_END_DEMO.md) | Prompt, findings, repairs, verification evidence, and limitations |
 | [Surface ownership contract](docs/MATH_SURFACE_OWNERSHIP.md) | Renderer boundaries, review responsibility, and release gate |
-| [Model fixture](docs/model.md) | Additional GitHub Markdown formulas used by the gate |
+| [Model fixture](docs/model.md) | Controlled mathematical formulas used by the cross-surface gate |
 | [Audit policy](.math-surface.json) | Included surfaces, exclusions, and governance requirements |
 | [CI workflow](.github/workflows/math-surface-audit.yml) | Pinned structural, semantic, renderer, and visual checks |
 | [Reviewed visual baseline](.github/math-surface/math-render.spec.mjs-snapshots/math-surface-linux.png) | Human-approved Chromium reference image |
-
-## Controlled mathematical fixture
 
 The state vector is $x(t) = [p(t), w(t), r(t)]^\top$, where the components represent power, water, and road service.
 
@@ -82,11 +58,3 @@ not mathematics: preserve this fixture
 - `notebooks/*.ipynb`: Jupyter Markdown plus MathJax.
 - `public/*.html`: generated HTML; repair its generator, not the output.
 - `archive/*.md`: verbatim historical material.
-
-## Renderer versions
-
-The controlled environment currently pins **MathJax 4.1.3**, **KaTeX 0.18.4**, and **cmark-gfm 0.29.0.gfm.13** through the repository audit configuration rather than presenting renderer versions as project identity badges.
-
-## Scientific boundary
-
-Passing the mathematics-surface audit demonstrates that the configured documentation surfaces preserve the intended mathematical fixture under the repository's structural, semantic, renderer, and visual checks. It does **not** establish empirical validity of the coupled-infrastructure model itself.
